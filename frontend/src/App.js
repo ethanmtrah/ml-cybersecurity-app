@@ -14,7 +14,7 @@ function App() {
   return (
     <div className="App">
       <header className="app-header">
-        <h1>🛡️ ML-Powered Cybersecurity Detection Platform</h1>
+        <h1>Cybersecurity AI App</h1>
         <p>Advanced AI-driven malware and spam detection with real-time analytics</p>
       </header>
 
