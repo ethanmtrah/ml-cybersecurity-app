@@ -18,7 +18,7 @@ AI-powered web application for malware detection and spam email classification u
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```

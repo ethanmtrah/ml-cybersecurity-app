@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 
 // API Configuration
@@ -6,12 +6,16 @@ const API_URL = 'http://localhost:8000';
 
 function App() {
   const [activeTab, setActiveTab] = useState('spam');
+  const [predictionHistory, setPredictionHistory] = useState({
+    spam: [],
+    malware: []
+  });
   
   return (
     <div className="App">
       <header className="app-header">
-        <h1>🛡️ Cybersecurity ML Detection</h1>
-        <p>AI-powered malware and spam detection</p>
+        <h1>🛡️ ML-Powered Cybersecurity Detection Platform</h1>
+        <p>Advanced AI-driven malware and spam detection with real-time analytics</p>
       </header>
 
       <div className="tab-container">
@@ -27,24 +31,433 @@ function App() {
         >
           Malware Detection
         </button>
+        <button 
+          className={`tab ${activeTab === 'analytics' ? 'active' : ''}`}
+          onClick={() => setActiveTab('analytics')}
+        >
+          Analytics Dashboard
+        </button>
       </div>
 
       <div className="content">
-        {activeTab === 'spam' ? <SpamDetector /> : <MalwareDetector />}
+        {activeTab === 'spam' && <SpamDetector predictionHistory={predictionHistory} setPredictionHistory={setPredictionHistory} />}
+        {activeTab === 'malware' && <MalwareDetector predictionHistory={predictionHistory} setPredictionHistory={setPredictionHistory} />}
+        {activeTab === 'analytics' && <AnalyticsDashboard predictionHistory={predictionHistory} />}
       </div>
 
       <footer className="app-footer">
-        <p>Powered by Random Forest ML Models | FastAPI + React</p>
+        <p>Powered by Random Forest ML Models | FastAPI + React + D3.js | Real-time Threat Analytics</p>
       </footer>
     </div>
   );
 }
 
 // ==========================================
-// SPAM DETECTOR COMPONENT
+// ANALYTICS DASHBOARD WITH D3.JS CHARTS
 // ==========================================
 
-function SpamDetector() {
+function AnalyticsDashboard({ predictionHistory }) {
+  const [modelStats, setModelStats] = useState(null);
+  const [threatTrends, setThreatTrends] = useState([]);
+
+  useEffect(() => {
+    // Fetch model info from API
+    fetch(`${API_URL}/models/info`)
+      .then(res => res.json())
+      .then(data => setModelStats(data))
+      .catch(err => console.error('Error fetching model stats:', err));
+
+    // Generate threat trends (simulated real-time data)
+    const interval = setInterval(() => {
+      setThreatTrends(prev => {
+        const newData = [...prev];
+        const timestamp = new Date();
+        
+        // Simulate threat detection over time
+        newData.push({
+          time: timestamp.toLocaleTimeString(),
+          spam: Math.floor(Math.random() * 20) + 5,
+          malware: Math.floor(Math.random() * 15) + 3
+        });
+
+        // Keep only last 20 data points
+        if (newData.length > 20) newData.shift();
+        return newData;
+      });
+    }, 3000); // Update every 3 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="analytics-container">
+      <div className="charts-container">
+        <div className="chart-box">
+          <h3>Prediction Confidence Distribution</h3>
+          <ConfidenceChart predictionHistory={predictionHistory} />
+        </div>
+
+        <div className="chart-box">
+          <h3>Threat Detection Trends (Simulated - randomly generated data)</h3>
+          <ThreatTrendsChart data={threatTrends} />
+        </div>
+      </div>
+
+      {modelStats && (
+        <div className="model-info-box">
+          <h3>🤖 Model Information</h3>
+          <div className="model-grid">
+            <div className="model-card">
+              <h4>Spam Detection Model</h4>
+              <p><strong>Type:</strong> {modelStats.spam.model_type}</p>
+              <p><strong>TF-IDF Features:</strong> {modelStats.spam.tfidf_features}</p>
+              <p><strong>Manual Features:</strong> {modelStats.spam.manual_features}</p>
+              <p><strong>Keywords:</strong> {modelStats.spam.keywords.join(', ')}</p>
+            </div>
+            <div className="model-card">
+              <h4>Malware Detection Model</h4>
+              <p><strong>Type:</strong> {modelStats.malware.model_type}</p>
+              <p><strong>Total Features:</strong> {modelStats.malware.features}</p>
+              <p><strong>Top Features:</strong> {modelStats.malware.feature_names.join(', ')}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// STAT CARD COMPONENT
+// ==========================================
+
+function StatCard({ title, value, icon, color }) {
+  return (
+    <div className="stat-card" style={{ borderColor: color }}>
+      <div className="stat-icon" style={{ color }}>{icon}</div>
+      <div className="stat-content">
+        <h4>{title}</h4>
+        <p className="stat-value">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// D3.JS CHART 1: CONFIDENCE DISTRIBUTION
+// ==========================================
+
+function ConfidenceChart({ predictionHistory }) {
+  const svgRef = React.useRef();
+  const [filterType, setFilterType] = useState('all');
+
+  useEffect(() => {
+    if (!svgRef.current) return;
+
+    // Combine and filter data
+    let allPredictions = [
+      ...predictionHistory.spam.map(p => ({ ...p, type: 'spam' })),
+      ...predictionHistory.malware.map(p => ({ ...p, type: 'malware' }))
+    ];
+
+    if (filterType !== 'all') {
+      allPredictions = allPredictions.filter(p => p.type === filterType);
+    }
+
+    if (allPredictions.length === 0) return;
+
+    // Clear previous chart
+    const svg = window.d3.select(svgRef.current);
+    svg.selectAll("*").remove();
+
+    const width = 500;
+    const height = 300;
+    const margin = { top: 20, right: 30, bottom: 40, left: 50 };
+
+    // Create bins for histogram
+    const bins = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+    const histogram = bins.slice(0, -1).map((bin, i) => {
+      const count = allPredictions.filter(p => 
+        p.confidence >= bin && p.confidence < bins[i + 1]
+      ).length;
+      return { bin: `${(bin * 100).toFixed(0)}-${(bins[i + 1] * 100).toFixed(0)}%`, count };
+    });
+
+    // Scales
+    const x = window.d3.scaleBand()
+      .domain(histogram.map(d => d.bin))
+      .range([margin.left, width - margin.right])
+      .padding(0.1);
+
+    const y = window.d3.scaleLinear()
+      .domain([0, window.d3.max(histogram, d => d.count) || 10])
+      .nice()
+      .range([height - margin.bottom, margin.top]);
+
+    // Draw bars
+    svg.selectAll("rect")
+      .data(histogram)
+      .join("rect")
+      .attr("x", d => x(d.bin))
+      .attr("y", d => y(d.count))
+      .attr("width", x.bandwidth())
+      .attr("height", d => y(0) - y(d.count))
+      .attr("fill", "#667eea")
+      .attr("opacity", 0.8)
+      .on("mouseover", function(event, d) {
+        window.d3.select(this).attr("opacity", 1);
+        // Show tooltip
+        svg.append("text")
+          .attr("class", "tooltip")
+          .attr("x", x(d.bin) + x.bandwidth() / 2)
+          .attr("y", y(d.count) - 5)
+          .attr("text-anchor", "middle")
+          .style("fill", "#333")
+          .style("font-weight", "bold")
+          .text(d.count);
+      })
+      .on("mouseout", function() {
+        window.d3.select(this).attr("opacity", 0.8);
+        svg.selectAll(".tooltip").remove();
+      });
+
+    // X axis
+    svg.append("g")
+      .attr("transform", `translate(0,${height - margin.bottom})`)
+      .call(window.d3.axisBottom(x))
+      .selectAll("text")
+      .style("text-anchor", "end")
+      .attr("dx", "-.8em")
+      .attr("dy", ".15em")
+      .attr("transform", "rotate(-45)");
+
+    // Y axis
+    svg.append("g")
+      .attr("transform", `translate(${margin.left},0)`)
+      .call(window.d3.axisLeft(y));
+
+    // Y axis label
+    svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 15)
+      .attr("x", -(height / 2))
+      .style("text-anchor", "middle")
+      .text("Count");
+
+  }, [predictionHistory, filterType]);
+
+  return (
+    <div className="chart-wrapper">
+      <div className="chart-filters">
+        <button 
+          className={filterType === 'all' ? 'filter-active' : ''}
+          onClick={() => setFilterType('all')}
+        >
+          All
+        </button>
+        <button 
+          className={filterType === 'spam' ? 'filter-active' : ''}
+          onClick={() => setFilterType('spam')}
+        >
+          Spam Only
+        </button>
+        <button 
+          className={filterType === 'malware' ? 'filter-active' : ''}
+          onClick={() => setFilterType('malware')}
+        >
+          Malware Only
+        </button>
+      </div>
+      <svg ref={svgRef} width="550" height="300"></svg>
+    </div>
+  );
+}
+
+// ==========================================
+// D3.JS CHART 2: LIVE THREAT TRENDS
+// ==========================================
+
+function ThreatTrendsChart({ data }) {
+  const svgRef = React.useRef();
+
+  useEffect(() => {
+    if (!svgRef.current || data.length === 0) return;
+
+    const svg = window.d3.select(svgRef.current);
+    svg.selectAll("*").remove();
+
+    const width = 550;
+    const height = 300;
+    const margin = { top: 20, right: 80, bottom: 40, left: 50 };
+
+    // Scales
+    const x = window.d3.scalePoint()
+      .domain(data.map(d => d.time))
+      .range([margin.left, width - margin.right]);
+
+    const y = window.d3.scaleLinear()
+      .domain([0, window.d3.max(data, d => Math.max(d.spam, d.malware)) || 50])
+      .nice()
+      .range([height - margin.bottom, margin.top]);
+
+    // Line generators
+    const spamLine = window.d3.line()
+      .x(d => x(d.time))
+      .y(d => y(d.spam))
+      .curve(window.d3.curveMonotoneX);
+
+    const malwareLine = window.d3.line()
+      .x(d => x(d.time))
+      .y(d => y(d.malware))
+      .curve(window.d3.curveMonotoneX);
+
+    // Draw spam line
+    svg.append("path")
+      .datum(data)
+      .attr("fill", "none")
+      .attr("stroke", "#e74c3c")
+      .attr("stroke-width", 3)
+      .attr("d", spamLine);
+
+    // Draw malware line
+    svg.append("path")
+      .datum(data)
+      .attr("fill", "none")
+      .attr("stroke", "#e67e22")
+      .attr("stroke-width", 3)
+      .attr("d", malwareLine);
+
+    // Add circles for spam data points
+    svg.selectAll(".spam-dot")
+      .data(data)
+      .join("circle")
+      .attr("class", "spam-dot")
+      .attr("cx", d => x(d.time))
+      .attr("cy", d => y(d.spam))
+      .attr("r", 4)
+      .attr("fill", "#e74c3c")
+      .on("mouseover", function(event, d) {
+        window.d3.select(this).attr("r", 6);
+        // Show value
+        svg.append("text")
+          .attr("class", "hover-text")
+          .attr("x", x(d.time))
+          .attr("y", y(d.spam) - 10)
+          .attr("text-anchor", "middle")
+          .style("fill", "#e74c3c")
+          .style("font-weight", "bold")
+          .text(d.spam);
+      })
+      .on("mouseout", function() {
+        window.d3.select(this).attr("r", 4);
+        svg.selectAll(".hover-text").remove();
+      });
+
+    // Add circles for malware data points
+    svg.selectAll(".malware-dot")
+      .data(data)
+      .join("circle")
+      .attr("class", "malware-dot")
+      .attr("cx", d => x(d.time))
+      .attr("cy", d => y(d.malware))
+      .attr("r", 4)
+      .attr("fill", "#e67e22")
+      .on("mouseover", function(event, d) {
+        window.d3.select(this).attr("r", 6);
+        svg.append("text")
+          .attr("class", "hover-text")
+          .attr("x", x(d.time))
+          .attr("y", y(d.malware) - 10)
+          .attr("text-anchor", "middle")
+          .style("fill", "#e67e22")
+          .style("font-weight", "bold")
+          .text(d.malware);
+      })
+      .on("mouseout", function() {
+        window.d3.select(this).attr("r", 4);
+        svg.selectAll(".hover-text").remove();
+      });
+
+    // X axis
+    svg.append("g")
+      .attr("transform", `translate(0,${height - margin.bottom})`)
+      .call(window.d3.axisBottom(x).tickValues(x.domain().filter((d, i) => i % 3 === 0)))
+      .selectAll("text")
+      .style("text-anchor", "end")
+      .attr("dx", "-.8em")
+      .attr("dy", ".15em")
+      .attr("transform", "rotate(-45)");
+
+    // Y axis
+    svg.append("g")
+      .attr("transform", `translate(${margin.left},0)`)
+      .call(window.d3.axisLeft(y));
+
+    // Y axis label
+    svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 15)
+      .attr("x", -(height / 2))
+      .style("text-anchor", "middle")
+      .text("Threats Detected");
+
+    // Legend
+    const legend = svg.append("g")
+      .attr("transform", `translate(${width - 70}, 20)`);
+
+    legend.append("line")
+      .attr("x1", 0)
+      .attr("x2", 20)
+      .attr("y1", 0)
+      .attr("y2", 0)
+      .attr("stroke", "#e74c3c")
+      .attr("stroke-width", 3);
+
+    legend.append("text")
+      .attr("x", 25)
+      .attr("y", 5)
+      .text("Spam")
+      .style("font-size", "12px");
+
+    legend.append("line")
+      .attr("x1", 0)
+      .attr("x2", 20)
+      .attr("y1", 20)
+      .attr("y2", 20)
+      .attr("stroke", "#e67e22")
+      .attr("stroke-width", 3);
+
+    legend.append("text")
+      .attr("x", 25)
+      .attr("y", 25)
+      .text("Malware")
+      .style("font-size", "12px");
+
+  }, [data]);
+
+  return (
+    <div className="chart-wrapper">
+      <svg ref={svgRef} width="550" height="300"></svg>
+      <p className="chart-note">📡 Live simulation - updates every 3 seconds</p>
+    </div>
+  );
+}
+
+// Helper function
+function calculateDetectionRate(predictions) {
+  if (predictions.length === 0) return '0%';
+  const detected = predictions.filter(p => 
+    (p.type === 'spam' && p.prediction === 'spam') ||
+    (p.type === 'malware' && p.prediction === 'malware')
+  ).length;
+  return `${((detected / predictions.length) * 100).toFixed(1)}%`;
+}
+
+// ==========================================
+// SPAM DETECTOR COMPONENT (Enhanced)
+// ==========================================
+
+function SpamDetector({ predictionHistory, setPredictionHistory }) {
   const [emailText, setEmailText] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -71,6 +484,12 @@ function SpamDetector() {
 
       const data = await response.json();
       setResult(data);
+      
+      // Add to history
+      setPredictionHistory(prev => ({
+        ...prev,
+        spam: [...prev.spam, { ...data, type: 'spam', timestamp: new Date() }]
+      }));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -159,10 +578,10 @@ function SpamDetector() {
 }
 
 // ==========================================
-// MALWARE DETECTOR COMPONENT
+// MALWARE DETECTOR COMPONENT (Enhanced)
 // ==========================================
 
-function MalwareDetector() {
+function MalwareDetector({ predictionHistory, setPredictionHistory }) {
   const [formData, setFormData] = useState({
     millisecond: 0,
     state: 0,
@@ -232,6 +651,12 @@ function MalwareDetector() {
 
       const data = await response.json();
       setResult(data);
+      
+      // Add to history
+      setPredictionHistory(prev => ({
+        ...prev,
+        malware: [...prev.malware, { ...data, type: 'malware', timestamp: new Date() }]
+      }));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -243,18 +668,18 @@ function MalwareDetector() {
     if (type === 'malware') {
       setFormData({
         ...formData,
-        static_prio: 14000,
-        utime: 370000,
-        free_area_cache: 10000,
-        nvcsw: 5
-      });
-    } else {
-      setFormData({
-        ...formData,
         static_prio: 25000,
         utime: 410000,
         free_area_cache: 50000,
         nvcsw: 100
+      });
+    } else {
+      setFormData({
+        ...formData,
+        static_prio: 14000,
+        utime: 370000,
+        free_area_cache: 10000,
+        nvcsw: 5
       });
     }
   };
@@ -277,7 +702,7 @@ function MalwareDetector() {
 
       <form onSubmit={handleSubmit} className="malware-form">
         <div className="form-section">
-          <h3>Most Important Features</h3>
+          <h3>🔑 Most Important Features</h3>
           <div className="form-grid">
             {importantFields.map(field => (
               <div key={field} className="form-field">
