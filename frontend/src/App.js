@@ -454,7 +454,7 @@ function calculateDetectionRate(predictions) {
 }
 
 // ==========================================
-// SPAM DETECTOR COMPONENT (Enhanced)
+// SPAM DETECTOR COMPONENT
 // ==========================================
 
 function SpamDetector({ predictionHistory, setPredictionHistory }) {
@@ -578,7 +578,7 @@ function SpamDetector({ predictionHistory, setPredictionHistory }) {
 }
 
 // ==========================================
-// MALWARE DETECTOR COMPONENT (Enhanced)
+// MALWARE DETECTOR COMPONENT
 // ==========================================
 
 function MalwareDetector({ predictionHistory, setPredictionHistory }) {
@@ -668,18 +668,18 @@ function MalwareDetector({ predictionHistory, setPredictionHistory }) {
     if (type === 'malware') {
       setFormData({
         ...formData,
-        static_prio: 25000,
-        utime: 410000,
-        free_area_cache: 50000,
-        nvcsw: 100
-      });
-    } else {
-      setFormData({
-        ...formData,
         static_prio: 14000,
         utime: 370000,
         free_area_cache: 10000,
         nvcsw: 5
+      });
+    } else {
+      setFormData({
+        ...formData,
+        static_prio: 25000,
+        utime: 410000,
+        free_area_cache: 50000,
+        nvcsw: 100
       });
     }
   };

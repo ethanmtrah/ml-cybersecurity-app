@@ -5,14 +5,13 @@ AI-powered web application for malware detection and spam email classification u
 - **Backend**: FastAPI, scikit-learn, Python 3.8+
 - **Frontend**: React.js
 - **ML Models**: Random Forest Classifiers
-- **Deployment**: Docker (optional)
 
 ## Quick Start
 
 ### Prerequisites
-- Python 3.8+
-- Node.js 14+
-- npm or yarn
+- Python
+- Node.js
+- npm
 
 ### Backend Setup
 ```bash
@@ -23,9 +22,16 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
+### Backend running
+```bash
+cd backend
+.\venv\Scripts\activate
+uvicorn app.main:app --reload
+```
+
 Backend runs on `http://localhost:8000`
 
-### Frontend Setup
+### Frontend Setup / running
 ```bash
 cd frontend
 npm install
@@ -80,6 +86,7 @@ Interactive API docs available at `http://localhost:8000/docs` when backend is r
 
 ## Project Structure
 ml-cybersecurity-app/
+├── .env/              # Python Virtual Environment for backend
 ├── backend/              # FastAPI backend
 │   ├── app/
 │   │   ├── main.py
@@ -87,9 +94,9 @@ ml-cybersecurity-app/
 │   └── requirements.txt
 ├── frontend/            # React frontend
 │   ├── src/
-│   │   ├── App.jsx
+│   │   ├── App.js
 │   │   └── App.css
 │   └── package.json
 └── notebooks/           # Jupyter notebooks
-├── malware_model.ipynb
-└── spam_model.ipynb
+    ├── malware_model.ipynb
+    └── spam_model.ipynb
