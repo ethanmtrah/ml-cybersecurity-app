@@ -77,3 +77,19 @@ Interactive API docs available at `http://localhost:8000/docs` when backend is r
   ...
 }
 ```
+
+## Project Structure
+ml-cybersecurity-app/
+├── backend/              # FastAPI backend
+│   ├── app/
+│   │   ├── main.py
+│   │   └── ml_models/   # Trained models (.pkl files)
+│   └── requirements.txt
+├── frontend/            # React frontend
+│   ├── src/
+│   │   ├── App.jsx
+│   │   └── App.css
+│   └── package.json
+└── notebooks/           # Jupyter notebooks
+├── malware_model.ipynb
+└── spam_model.ipynb
